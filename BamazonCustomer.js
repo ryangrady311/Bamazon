@@ -25,41 +25,11 @@ function runSearch() {
  
   displayTable();
   
-    inquirer
-    .prompt({
-      name: "action",
-      type: "input",
-      message: "What would you like to buy? (Use product ID)",
-     
-    })
-    .then(function(answer) {
- 
-    //   switch (answer.action) {
-    //   case "Find songs by artist":
-    //     artistSearch();
-    //     break;
+//Wait for the SQL table to load then inquire user
 
-    //   case "Find all artists who appear more than once":
-    //     multiSearch();
-    //     break;
+  setTimeout(promptUser, 1000);
 
-    //   case "Find data within a specific range":
-    //     rangeSearch();
-    //     break;
-
-    //   case "Search for a specific song":
-    //     songSearch();
-    //     break;
-          
-    //   case "exit":
-    //     connection.end();
-    //     break;
-    //   }
-
-
-    
-
-    });
+  
 }
 
 function displayTable() {
@@ -73,108 +43,98 @@ function displayTable() {
 
             
         }
-     
+     console.log("");
       
       });
 
 }
 
+function promptUser() {
 
-function artistSearch() {
-  inquirer
+    inquirer
     .prompt({
-      name: "artist",
+      name: "action",
       type: "input",
-      message: "What artist would you like to search for?"
+      message: "What would you like to buy? (Use product ID)",
+     
     })
-    .then(function(answer) {
-      var query = "SELECT position, song, year FROM top5000 WHERE ?";
-      connection.query(query, { artist: answer.artist }, function(err, res) {
-        for (var i = 0; i < res.length; i++) {
-          console.log("Position: " + res[i].position + " || Song: " + res[i].song + " || Year: " + res[i].year);
-        }
-        runSearch();
-      });
-    });
-}
+    .then(function(answer1) {
 
-function multiSearch() {
-  var query = "SELECT artist FROM top5000 GROUP BY artist HAVING count(*) > 1";
-  connection.query(query, function(err, res) {
-    for (var i = 0; i < res.length; i++) {
-      console.log(res[i].artist);
+    if (isNaN(parseInt(answer1.action))){
+        console.log("That's not a valid Response, try entering an item ID next time");
+        console.log("");
+        promptUser();
+
     }
-    runSearch();
-  });
-}
+    else{
 
-function rangeSearch() {
-  inquirer
-    .prompt([
-      {
-        name: "start",
-        type: "input",
-        message: "Enter starting position: ",
-        validate: function(value) {
-          if (isNaN(value) === false) {
-            return true;
-          }
-          return false;
-        }
-      },
-      {
-        name: "end",
-        type: "input",
-        message: "Enter ending position: ",
-        validate: function(value) {
-          if (isNaN(value) === false) {
-            return true;
-          }
-          return false;
-        }
-      }
-    ])
-    .then(function(answer) {
-      var query = "SELECT position,song,artist,year FROM top5000 WHERE position BETWEEN ? AND ?";
-      connection.query(query, [answer.start, answer.end], function(err, res) {
-        for (var i = 0; i < res.length; i++) {
-          console.log(
-            "Position: " +
-              res[i].position +
-              " || Song: " +
-              res[i].song +
-              " || Artist: " +
-              res[i].artist +
-              " || Year: " +
-              res[i].year
-          );
-        }
-        runSearch();
-      });
-    });
-}
-
-function songSearch() {
-  inquirer
+        inquirer
     .prompt({
-      name: "song",
+      name: "action",
       type: "input",
-      message: "What song would you like to look for?"
+      message: "How many units of this product would you like to buy?",
+     
     })
-    .then(function(answer) {
-      console.log(answer.song);
-      connection.query("SELECT * FROM top5000 WHERE ?", { song: answer.song }, function(err, res) {
-        console.log(
-          "Position: " +
-            res[0].position +
-            " || Song: " +
-            res[0].song +
-            " || Artist: " +
-            res[0].artist +
-            " || Year: " +
-            res[0].year
-        );
-        runSearch();
-      });
+    .then(function(answer2) {
+        if (isNaN(parseInt(answer2.action))){
+            console.log("That's not a valid Response, the quantity has to be a number");
+            console.log("");
+            promptUser();
+    
+        }
+        else{
+
+        itemSearch(answer1.action,answer2.action);
+
+        }
+
+
+    });
+    
+    }
+
     });
 }
+
+
+function itemSearch(sqlID, itemQuantity) {
+
+  
+      var query = "SELECT product_name,stock_quantity FROM products WHERE ?";
+      connection.query(query, { id: sqlID }, function(err, queryRes) {
+       
+    if (itemQuantity == 0){
+        console.log("Thanks for looking, try to buy something sometime");
+
+    }
+    else if (itemQuantity == 1){
+      console.log("congrats!  You have aquired 1 new "+queryRes[0].product_name);
+       
+    }
+    else if (itemQuantity>1){
+    console.log("congrats!  You have aquired " + itemQuantity+ " new "+queryRes[0].product_name + "s");
+
+    }
+
+    var itemsRemaining = queryRes[0].stock_quantity - itemQuantity;
+
+    updateTable(sqlID, itemsRemaining);                 
+
+      });
+    
+}
+
+function updateTable(sqlID, itemsRemaining) {
+
+
+ var query = "UPDATE products SET stock_quantity = ? WHERE id = ?";
+ connection.query(query, [ itemsRemaining, sqlID ], function(err, queryRes) {
+
+    
+   console.log("");
+    
+   setTimeout(runSearch, 2000);
+
+});
+}
+
