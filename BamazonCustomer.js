@@ -84,7 +84,7 @@ function promptUser() {
         }
         else{
 
-        itemSearch(answer1.action,answer2.action);
+        checkIfExists(answer1.action,answer2.action);
 
         }
 
@@ -97,26 +97,68 @@ function promptUser() {
 }
 
 
+function checkIfExists(sqlID, itemQuantity) {
+
+  
+    var query = "SELECT EXISTS (SELECT product_name,stock_quantity FROM products WHERE ?)";
+    connection.query(query, { id: sqlID }, function(err, queryRes) {
+      if (err) throw err;
+
+  
+
+     var str = JSON.stringify(queryRes[0]);
+    str = str.substring(str.indexOf(":") + 1);
+     str = str.replace("}","");
+    
+    
+    var existingID = parseInt(str);
+     
+
+    if (existingID == 1) {
+        itemSearch(sqlID, itemQuantity);  
+
+    }
+    else{
+    console.log("Not a valid item id, try entering a valid ID next time");
+    console.log("");
+    promptUser();
+    }           
+
+    });
+  
+}
+
 function itemSearch(sqlID, itemQuantity) {
 
   
       var query = "SELECT product_name,stock_quantity FROM products WHERE ?";
       connection.query(query, { id: sqlID }, function(err, queryRes) {
-       
+        if (err) throw err;
+
+    
+
     if (itemQuantity == 0){
         console.log("Thanks for looking, try to buy something sometime");
+        var itemsRemaining = queryRes[0].stock_quantity ;
+
+    }
+    else if (queryRes[0].stock_quantity < itemQuantity){
+        console.log("There aren't enough "+ queryRes[0].product_name+ "s in stock, come back when we have more");
+        var itemsRemaining = queryRes[0].stock_quantity ;
 
     }
     else if (itemQuantity == 1){
       console.log("congrats!  You have aquired 1 new "+queryRes[0].product_name);
+      var itemsRemaining = queryRes[0].stock_quantity - itemQuantity;
        
     }
     else if (itemQuantity>1){
     console.log("congrats!  You have aquired " + itemQuantity+ " new "+queryRes[0].product_name + "s");
+    var itemsRemaining = queryRes[0].stock_quantity - itemQuantity;
 
     }
 
-    var itemsRemaining = queryRes[0].stock_quantity - itemQuantity;
+    
 
     updateTable(sqlID, itemsRemaining);                 
 
